@@ -1,7 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_500">#6750A4</color>
-    <color name="purple_700">#4F378B</color>
-    <color name="teal_200">#7FCFE0</color>
-    <color name="ic_launcher_bg">#1B1530</color>
+    <!-- Unsleep warm palette -->
+    <color name="bg_dark">#1b1411</color>
+    <color name="bg_dark2">#15100d</color>
+    <color name="bg_idle">#1b1411</color>
+    <color name="bg_result_top">#2a1d13</color>
+
+    <color name="amber">#f0a868</color>
+    <color name="amber_light">#f6c89a</color>
+    <color name="amber_pale">#ffe2b6</color>
+    <color name="amber_deep">#cf7a3f</color>
+    <color name="btn_amber_top">#f3b074</color>
+    <color name="btn_amber_bottom">#e0894a</color>
+    <color name="btn_text_dark">#3a1e0a</color>
+
+    <color name="text_light">#f3e7da</color>
+    <color name="text_lighter">#f6ecde</color>
+    <color name="text_muted">#b29a86</color>
+    <color name="text_muted2">#9c8775</color>
+    <color name="text_dim">#7d6a5a</color>
+    <color name="text_soft">#cbb8a5</color>
+    <color name="accent_text">#e7b483</color>
+    <color name="hot">#b06a3a</color>
+
+    <color name="card_dark">#261e18</color>
+    <color name="card_dark2">#271d15</color>
+    <color name="chip_dark">#221a14</color>
+    <color name="hairline">#33291f</color>
+
+    <color name="ic_launcher_bg">#15100d</color>
 </resources>

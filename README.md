@@ -1,63 +1,58 @@
-# SleepTalk 🌙🎙️
+# Unsleep 🌅🎙️
 
-An Android app that listens through the microphone all night and keeps only the
-moments where you actually made a sound (talking, mumbling, snoring…). Those
-chunks are stitched together into a **single WAV file** so in the morning you can
-listen to a short highlight reel instead of 8 hours of silence.
+> узнай, что ты говоришь во сне
 
-## How it works
+An Android app that listens through the microphone all night, throws away the
+hours of silence and stitches only the moments where there was a sound into one
+short track — ready for the morning.
 
-- Tap **Start** before sleeping. Recording runs in a **foreground service** with a
-  wake lock, so it keeps going with the screen off.
-- Audio is analysed in real time. The app tracks the ambient **noise floor** and
-  only writes audio that rises above it (with **0.8 s lead-in** and **1.5 s
-  lead-out** padding so words aren't clipped). Pure silence is discarded.
-- Tap **Stop & analyze** in the morning. The session is finalised into one WAV
-  containing every detected segment, back to back.
-- Each session shows up in the list with its **duration, segment count and size**.
-  You can **play, share or delete** it.
+## Screens
 
-The **Sensitivity** slider controls how quiet a sound has to be to count
-(higher = catches quieter sounds). Watch the level bar: when it turns to
-"🔊 Sound detected", that audio is being kept.
+1. **Готов слушать** — tap the sun to start. Shows last night's recap.
+2. **Слушаю** — live timer, equalizer, running count of detected moments.
+   Runs in a foreground service with a wake lock, so it keeps going with the
+   screen off.
+3. **Вырезаю тишину** — on stop, the night is finalised into the glued track.
+4. **Доброе утро** — stats (total sound, sleep length, loudest moment), a player
+   for the combined track, and a list of every moment with its time, length and
+   mini-waveform. Share / replay / delete.
 
-## Specs
+## Whisper calibration 🤫
 
-- Format: 16 kHz mono 16-bit PCM WAV
-- minSdk 26 (Android 8.0+), targetSdk 34
-- Files live in `Android/data/com.sleeptalk.app/files/sessions/`
+Tap **Калибровка** on the home screen. Hold the phone ~50 cm away; the app
+measures the room's silence, then your whisper, and sets the detection threshold
+a safe **40 % below** that whisper so even quiet sleep-talk is caught. The value
+is saved and used for every following night.
+
+## How detection works
+
+- 16 kHz mono PCM, analysed in real time in 100 ms frames.
+- The app tracks the ambient **noise floor** and keeps audio that rises above the
+  threshold (calibrated whisper level, or adaptive if you never calibrated),
+  with **0.8 s lead-in** and **1.5 s lead-out** so words aren't clipped.
+- Each kept chunk becomes a "moment" with its own time/length/waveform; all
+  chunks are concatenated into one WAV.
+
+Files live in `Android/data/com.sleeptalk.app/files/sessions/` (`.wav` + a
+`.json` sidecar with the metadata).
 
 ## Install the prebuilt APK
 
-A ready-to-install debug APK is committed at the repo root:
-`SleepTalk-v1.0-debug.apk`. Copy it to your phone and open it. You'll need to
-allow **"Install unknown apps"** for whichever app opens it (browser / file
-manager). After install, grant the **microphone** and **notifications**
-permissions, and tap **Disable battery optimization** for reliable all-night
-recording.
+`Unsleep-v1.0-debug.apk` is committed at the repo root. Copy it to your phone and
+open it; allow **"Install unknown apps"** for the opener. On first launch grant
+**microphone** + **notifications**, and accept the **battery-optimization**
+prompt so the night recording isn't killed.
 
 ## Build it yourself
 
-### Option A — GitHub Actions (no local tooling)
-Every push builds the APK. Open the repo's **Actions** tab → latest **Build APK**
-run → download the **SleepTalk-debug-apk** artifact.
+- **GitHub Actions:** every push builds the APK — Actions tab → latest run →
+  download the `Unsleep-debug-apk` artifact.
+- **Android Studio:** open the folder, sync, Run.
+- **CLI:** `./gradlew :app:assembleDebug` (needs JDK 17+ and the Android SDK).
 
-### Option B — Android Studio
-Open this folder in Android Studio (Hedgehog or newer), let it sync, then
-**Run** on a device, or **Build → Build APK(s)**.
+## Notes
 
-### Option C — command line
-```sh
-# Requires JDK 17+ and the Android SDK (set ANDROID_HOME / sdk.dir)
-./gradlew :app:assembleDebug
-# APK at app/build/outputs/apk/debug/app-debug.apk
-```
-
-## Notes & tuning
-
-- It's a **debug** build (unsigned for the Play Store, but installs fine via
-  sideloading). 
-- If you catch too much/too little, adjust the **Sensitivity** slider — it can be
-  changed live while recording.
-- Detection parameters (frame size, padding, threshold curve) live in
-  `RecorderService.kt` if you want to tweak them.
+- Debug build (sideload-only, not signed for the Play Store).
+- Detection tuning (frame size, padding, threshold curve) lives in
+  `RecorderService.kt`; the whisper test in `Calibrator.kt`.
+- Fonts: Newsreader + Mulish (bundled). Built with Kotlin, AGP 8.5, minSdk 26.

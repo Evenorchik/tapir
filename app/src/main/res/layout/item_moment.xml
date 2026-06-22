@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/moment_bg"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="13dp"
+    android:paddingVertical="10dp">
+
+    <TextView
+        android:id="@+id/momentTime"
+        android:layout_width="44dp"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/text_soft"
+        android:textSize="12sp"
+        tools:ignore="HardcodedText"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:text="01:12" />
+
+    <com.sleeptalk.app.WaveBarsView
+        android:id="@+id/momentWave"
+        android:layout_width="0dp"
+        android:layout_height="22dp"
+        android:layout_weight="1"
+        android:layout_marginHorizontal="10dp" />
+
+    <TextView
+        android:id="@+id/momentDur"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_dim"
+        android:textSize="11sp" />
+</LinearLayout>

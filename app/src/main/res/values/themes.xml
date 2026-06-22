@@ -1,7 +1,13 @@
 <resources>
-    <style name="Theme.SleepTalk" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorSecondary">@color/teal_200</item>
+    <style name="Theme.Unsleep" parent="Theme.MaterialComponents.NoActionBar">
+        <item name="colorPrimary">@color/amber</item>
+        <item name="colorPrimaryVariant">@color/amber_deep</item>
+        <item name="colorSecondary">@color/amber_light</item>
+        <item name="android:windowBackground">@color/bg_dark</item>
+        <item name="android:statusBarColor">@color/bg_dark2</item>
+        <item name="android:navigationBarColor">@color/bg_dark</item>
+        <item name="android:fontFamily">@font/mulish</item>
+        <item name="fontFamily">@font/mulish</item>
+        <item name="android:textColor">@color/text_light</item>
     </style>
 </resources>

@@ -19,12 +19,14 @@ import androidx.core.app.NotificationCompat
 import java.io.File
 import kotlin.concurrent.thread
 import kotlin.math.max
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 /**
- * Foreground service that records from the microphone all night, keeps only the
- * chunks that are louder than the ambient noise floor (with lead-in / lead-out
- * padding) and writes them, concatenated, into a single WAV file.
+ * Foreground service that records the microphone all night, keeps only the
+ * chunks louder than the ambient noise floor (with lead-in / lead-out padding)
+ * and writes them, concatenated, into a single WAV. It also records per-segment
+ * metadata (when, how long, how loud, mini-waveform) for the morning summary.
  */
 class RecorderService : Service() {
 
@@ -38,12 +40,10 @@ class RecorderService : Service() {
         private const val CHANNEL_ID = "recording"
         private const val NOTIF_ID = 1
 
-        @Volatile
-        var sensitivity = 50
+        @Volatile var sensitivity = 50
     }
 
-    @Volatile
-    private var running = false
+    @Volatile private var running = false
     private var recordThread: Thread? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
@@ -71,14 +71,15 @@ class RecorderService : Service() {
         RecorderState.reset()
         RecorderState.isRecording = true
         RecorderState.startElapsedMs = SystemClock.elapsedRealtime()
-        recordThread = thread(start = true, name = "sleeptalk-rec") { recordLoop() }
+        RecorderState.startWallMs = System.currentTimeMillis()
+        recordThread = thread(start = true, name = "unsleep-rec") { recordLoop() }
     }
 
     private fun stopRecording() {
         running = false
         RecorderState.isRecording = false
         try {
-            recordThread?.join(3000)
+            recordThread?.join(4000)
         } catch (_: InterruptedException) {
         }
         recordThread = null
@@ -88,8 +89,9 @@ class RecorderService : Service() {
     }
 
     private fun recordLoop() {
-        val sampleRate = RecorderState.SAMPLE_RATE
+        val sampleRate = Audio.SAMPLE_RATE
         val frameSamples = sampleRate / 10 // 100 ms frames
+        val frameMs = 100L
         val minBuf = AudioRecord.getMinBufferSize(
             sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
         )
@@ -101,28 +103,32 @@ class RecorderService : Service() {
                 AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufSize
             )
         } catch (e: SecurityException) {
-            stopSelf()
-            return
+            stopSelf(); return
         }
         if (recorder.state != AudioRecord.STATE_INITIALIZED) {
-            recorder.release()
-            stopSelf()
-            return
+            recorder.release(); stopSelf(); return
         }
 
+        val calThreshold = getSharedPreferences("unsleep", Context.MODE_PRIVATE)
+            .getFloat("calThreshold", 0f).toDouble()
+
         val dir = SessionStore.dir(this)
-        val ts = System.currentTimeMillis()
-        val wavFile = File(dir, "session_$ts.wav")
+        val sessionStart = RecorderState.startWallMs
+        val wavFile = File(dir, "session_$sessionStart.wav")
         val writer = WavWriter(wavFile, sampleRate)
 
-        val prerollFrames = 8   // 0.8 s of lead-in kept before a sound starts
-        val hangoverFrames = 15 // 1.5 s of lead-out kept after it drops below threshold
+        val prerollFrames = 8   // 0.8 s lead-in
+        val hangoverFrames = 15 // 1.5 s lead-out
         val preroll = ArrayDeque<ShortArray>()
 
         var isActive = false
         var framesSinceLoud = 0
         var noiseFloor = -1.0
-        var segments = 0
+
+        val moments = mutableListOf<Moment>()
+        var segPeaks = mutableListOf<Int>()
+        var segSamples = 0L
+        var segStartWall = 0L
 
         val buf = ShortArray(frameSamples)
         recorder.startRecording()
@@ -137,37 +143,51 @@ class RecorderService : Service() {
                 if (read <= 0) continue
 
                 val rms = computeRms(buf, read)
+                val level = Audio.levelFromRms(rms)
                 if (noiseFloor < 0) noiseFloor = rms
 
                 val s = sensitivity.coerceIn(0, 100)
-                val mult = 8.0 - s * 0.062       // 8.0x (low) .. ~1.8x (high)
-                val absMin = 250.0 - s * 2.0      // 250 (low) .. 50 (high)
-                val threshold = max(noiseFloor * mult, absMin)
+                val sensScale = 2.0.pow((50 - s) / 50.0) // s50→1.0, s0→2.0 (less), s100→0.5 (more)
+                val base = if (calThreshold > 0) calThreshold else max(noiseFloor * 3.2, 170.0)
+                val threshold = max(noiseFloor * 1.4, base * sensScale)
 
                 RecorderState.currentRms = rms
+                RecorderState.currentLevel = level
                 RecorderState.threshold = threshold
-                RecorderState.noiseFloor = noiseFloor
+                RecorderState.triggered = rms > threshold
 
                 if (rms > threshold) {
                     if (!isActive) {
+                        // open a new segment: flush the pre-roll lead-in
+                        segPeaks = mutableListOf()
+                        segSamples = 0L
+                        segStartWall = System.currentTimeMillis() - preroll.size * frameMs
                         for (f in preroll) {
                             writer.writeFrame(f, f.size)
+                            segPeaks.add(Audio.levelFromRms(computeRms(f, f.size)))
+                            segSamples += f.size
                             RecorderState.capturedSamples += f.size
                         }
                         preroll.clear()
                         isActive = true
-                        segments++
-                        RecorderState.segmentCount = segments
+                        RecorderState.segmentCount = moments.size + 1
                     }
                     framesSinceLoud = 0
                     writer.writeFrame(buf, read)
+                    segPeaks.add(level)
+                    segSamples += read
                     RecorderState.capturedSamples += read
                 } else {
                     if (isActive) {
                         framesSinceLoud++
                         writer.writeFrame(buf, read)
+                        segPeaks.add(level)
+                        segSamples += read
                         RecorderState.capturedSamples += read
-                        if (framesSinceLoud >= hangoverFrames) isActive = false
+                        if (framesSinceLoud >= hangoverFrames) {
+                            moments.add(finishSegment(segStartWall, segSamples, segPeaks, sampleRate))
+                            isActive = false
+                        }
                     } else {
                         noiseFloor = noiseFloor * 0.98 + rms * 0.02
                         preroll.addLast(buf.copyOf(read))
@@ -175,20 +195,34 @@ class RecorderService : Service() {
                     }
                 }
             }
-        } finally {
-            try {
-                recorder.stop()
-            } catch (_: Exception) {
+            if (isActive) {
+                moments.add(finishSegment(segStartWall, segSamples, segPeaks, sampleRate))
             }
+        } finally {
+            try { recorder.stop() } catch (_: Exception) {}
             recorder.release()
             writer.finish()
-            if (segments == 0 || RecorderState.capturedSamples == 0L) {
+            val endWall = System.currentTimeMillis()
+            if (moments.isEmpty() || RecorderState.capturedSamples == 0L) {
                 wavFile.delete()
             } else {
-                SessionStore.writeMeta(wavFile, ts, segments, RecorderState.capturedMs)
+                val loudest = moments.maxByOrNull { it.peak }
+                val player = Audio.resample(moments.flatMap { it.w.toList() }, 40)
+                SessionStore.writeMeta(
+                    wavFile, sessionStart, endWall, RecorderState.capturedMs,
+                    loudest?.startMs ?: 0L, player, moments
+                )
                 sendBroadcast(Intent(BROADCAST_SAVED).setPackage(packageName))
             }
         }
+    }
+
+    private fun finishSegment(
+        startWall: Long, samples: Long, peaks: List<Int>, sampleRate: Int
+    ): Moment {
+        val durMs = samples * 1000 / sampleRate
+        val peak = peaks.maxOrNull() ?: 0
+        return Moment(startWall, durMs, peak, Audio.resample(peaks, 20))
     }
 
     private fun computeRms(buf: ShortArray, len: Int): Double {
@@ -244,7 +278,7 @@ class RecorderService : Service() {
 
     private fun acquireWakeLock() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "sleeptalk:recording").apply {
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "unsleep:recording").apply {
             setReferenceCounted(false)
             acquire()
         }

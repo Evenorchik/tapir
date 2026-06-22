@@ -1,122 +1,817 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:fitsSystemWindows="true"
+    tools:ignore="HardcodedText,ContentDescription,UseCompoundDrawables,RtlSymmetry">
 
-    <com.google.android.material.card.MaterialCardView
+    <!-- ============ 01 · IDLE ============ -->
+    <LinearLayout
+        android:id="@+id/idleScreen"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="2dp">
+        android:layout_height="match_parent"
+        android:background="@color/bg_idle"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="22dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <View
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:background="@drawable/orb_sun" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="9dp"
+                android:fontFamily="@font/newsreader"
+                android:text="Unsleep"
+                android:textColor="@color/text_light"
+                android:textSize="21sp" />
+
+            <TextView
+                android:id="@+id/idleCalibrate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/btn_outline"
+                android:fontFamily="sans-serif-medium"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="8dp"
+                android:text="Калибровка"
+                android:textColor="@color/text_soft"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:id="@+id/idleOrb"
+                android:layout_width="210dp"
+                android:layout_height="210dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true">
+
+                <View
+                    android:id="@+id/idleGlow"
+                    android:layout_width="200dp"
+                    android:layout_height="200dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/orb_glow" />
+
+                <View
+                    android:layout_width="178dp"
+                    android:layout_height="178dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/ring_soft" />
+
+                <View
+                    android:layout_width="138dp"
+                    android:layout_height="138dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/ring_soft" />
+
+                <View
+                    android:layout_width="112dp"
+                    android:layout_height="112dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/orb_sun" />
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:fontFamily="@font/newsreader"
+                android:text="Готов слушать"
+                android:textColor="@color/text_light"
+                android:textSize="27sp" />
+
+            <TextView
+                android:layout_width="220dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.4"
+                android:text="Нажмите на круг — и я тихо буду слушать всю ночь"
+                android:textColor="@color/text_muted"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/idleLast"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/card_dark"
+            android:orientation="vertical"
+            android:padding="15dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.1"
+                    android:text="ПРОШЛАЯ НОЧЬ"
+                    android:textColor="@color/text_dim"
+                    android:textSize="10sp" />
+
+                <TextView
+                    android:id="@+id/idleLastDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_dim"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="13dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/play_circle">
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:layout_gravity="center" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:text="▶"
+                        android:textColor="@color/btn_text_dark"
+                        android:textSize="13sp" />
+                </FrameLayout>
+
+                <com.sleeptalk.app.WaveBarsView
+                    android:id="@+id/idleSpark"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_weight="1"
+                    android:layout_marginHorizontal="13dp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="end"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/idleLastDur"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/newsreader"
+                        android:textColor="@color/text_light"
+                        android:textSize="17sp"
+                        android:text="2:14" />
+
+                    <TextView
+                        android:id="@+id/idleLastCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_dim"
+                        android:textSize="10sp"
+                        android:text="9 моментов" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ============ 02 · RECORDING ============ -->
+    <LinearLayout
+        android:id="@+id/recScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/bg_dark2"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="20dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <View
+                android:id="@+id/recDot"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
+                android:background="@drawable/orb_sun" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="9dp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.2"
+                android:text="СЛУШАЮ"
+                android:textColor="@color/amber_light"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <View
+                android:id="@+id/recRipple1"
+                android:layout_width="230dp"
+                android:layout_height="230dp"
+                android:layout_gravity="center"
+                android:background="@drawable/ring_amber" />
+
+            <View
+                android:id="@+id/recRipple2"
+                android:layout_width="230dp"
+                android:layout_height="230dp"
+                android:layout_gravity="center"
+                android:background="@drawable/ring_amber" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/recTimer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/newsreader"
+                    android:text="0:00:00"
+                    android:textColor="@color/text_light"
+                    android:textSize="46sp" />
+
+                <TextView
+                    android:id="@+id/recStarted"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/text_dim"
+                    android:textSize="12sp" />
+
+                <com.sleeptalk.app.WaveBarsView
+                    android:id="@+id/recWave"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="26dp" />
+
+                <LinearLayout
+                    android:id="@+id/recChip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="26dp"
+                    android:background="@drawable/chip_pill"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="9dp">
+
+                    <View
+                        android:layout_width="6dp"
+                        android:layout_height="6dp"
+                        android:background="@drawable/orb_sun" />
+
+                    <TextView
+                        android:id="@+id/recFound"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="пока тихо"
+                        android:textColor="@color/text_muted"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="240dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="15dp"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.4"
+            android:text="Можно погасить экран — запись продолжится в фоне"
+            android:textColor="@color/text_dim"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/recStop"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/btn_amber"
+            android:fontFamily="sans-serif-black"
+            android:gravity="center"
+            android:paddingVertical="17dp"
+            android:text="■   Остановить и собрать дорожку"
+            android:textColor="@color/btn_text_dark"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+    <!-- ============ 03 · ANALYZING ============ -->
+    <LinearLayout
+        android:id="@+id/analScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/bg_idle"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="36dp"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:id="@+id/analSpinner"
+            style="?android:attr/progressBarStyleLarge"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:indeterminateTint="@color/amber" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:fontFamily="@font/newsreader"
+            android:text="Вырезаю тишину"
+            android:textColor="@color/text_light"
+            android:textSize="24sp" />
+
+        <TextView
+            android:layout_width="220dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.4"
+            android:text="Оставляю только участки, где был звук, и склеиваю их в одну дорожку"
+            android:textColor="@color/text_muted"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- ============ CALIBRATION ============ -->
+    <LinearLayout
+        android:id="@+id/calScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/bg_idle"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="22dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/newsreader"
+                android:text="Калибровка громкости"
+                android:textColor="@color/text_light"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/calClose"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@drawable/btn_outline"
+                android:gravity="center"
+                android:text="✕"
+                android:textColor="@color/text_soft"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/calPhase"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/newsreader"
+                android:gravity="center"
+                android:text="Тест шёпотом"
+                android:textColor="@color/text_light"
+                android:textSize="28sp" />
+
+            <TextView
+                android:id="@+id/calHint"
+                android:layout_width="260dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.45"
+                android:text="Держите телефон в 50 см от лица. Я измерю тишину в комнате, затем ваш шёпот — и подберу чувствительность с запасом."
+                android:textColor="@color/text_muted"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/calCountdown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:fontFamily="@font/newsreader"
+                android:textColor="@color/amber_light"
+                android:textSize="40sp"
+                android:visibility="gone"
+                android:text="4" />
+
+            <com.sleeptalk.app.WaveBarsView
+                android:id="@+id/calWave"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginTop="24dp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/calResult"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:background="@drawable/card_dark"
+                android:orientation="vertical"
+                android:padding="18dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.1"
+                    android:text="ПОРОГ УСТАНОВЛЕН"
+                    android:textColor="@color/text_dim"
+                    android:textSize="10sp" />
+
+                <TextView
+                    android:id="@+id/calResultText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:lineSpacingMultiplier="1.4"
+                    android:textColor="@color/text_soft"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/calAction"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/btn_amber"
+            android:fontFamily="sans-serif-black"
+            android:gravity="center"
+            android:paddingVertical="17dp"
+            android:text="Начать тест"
+            android:textColor="@color/btn_text_dark"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+    <!-- ============ 04 · RESULT ============ -->
+    <ScrollView
+        android:id="@+id/resScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_result"
+        android:fillViewport="true"
+        android:visibility="gone">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingHorizontal="22dp"
+            android:paddingTop="20dp"
+            android:paddingBottom="22dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:background="@drawable/orb_sun" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.14"
+                    android:text="ДОБРОЕ УТРО"
+                    android:textColor="@color/accent_text"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/resClose"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/btn_outline"
+                    android:gravity="center"
+                    android:text="✕"
+                    android:textColor="@color/text_soft"
+                    android:textSize="14sp" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/timer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:text="00:00:00"
-                android:textSize="40sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/status"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="4dp"
-                android:text="@string/idle_status"
-                android:textSize="16sp" />
-
-            <ProgressBar
-                android:id="@+id/level"
-                style="?android:attr/progressBarStyleHorizontal"
+                android:id="@+id/resTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:max="100"
-                android:progress="0" />
+                android:fontFamily="@font/newsreader"
+                android:lineSpacingMultiplier="1.15"
+                android:textColor="@color/text_lighter"
+                android:textSize="27sp"
+                android:text="Этой ночью ты звучал 9 раз" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:baselineAligned="false"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/card_stat"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="11dp">
+
+                    <TextView
+                        android:id="@+id/resSound"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/newsreader"
+                        android:textColor="@color/text_lighter"
+                        android:textSize="21sp"
+                        android:text="2:14" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="всего звука"
+                        android:textColor="@color/text_muted2"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/card_stat"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="11dp">
+
+                    <TextView
+                        android:id="@+id/resSleep"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/newsreader"
+                        android:textColor="@color/text_lighter"
+                        android:textSize="21sp"
+                        android:text="7:42" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="длина сна"
+                        android:textColor="@color/text_muted2"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/card_stat"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="11dp">
+
+                    <TextView
+                        android:id="@+id/resLoudest"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/newsreader"
+                        android:textColor="@color/text_lighter"
+                        android:textSize="21sp"
+                        android:text="03:14" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="самый громкий"
+                        android:textColor="@color/text_muted2"
+                        android:textSize="10sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- player -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/card_dark"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.1"
+                        android:text="СКЛЕЕННАЯ ДОРОЖКА"
+                        android:textColor="@color/text_muted"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/resPlayerTotal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_muted2"
+                        android:textSize="11sp"
+                        android:text="2:14" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="13dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <FrameLayout
+                        android:id="@+id/resPlay"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="@drawable/play_circle"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <TextView
+                            android:id="@+id/resPlayIcon"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:text="▶"
+                            android:textColor="@color/btn_text_dark"
+                            android:textSize="15sp" />
+                    </FrameLayout>
+
+                    <com.sleeptalk.app.WaveBarsView
+                        android:id="@+id/resPlayerWave"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="9dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/resPlayerPos"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textColor="@color/amber_light"
+                        android:textSize="11sp"
+                        android:text="0:00" />
+
+                    <TextView
+                        android:id="@+id/resPlayerLeft"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_dim"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/captured"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="8dp"
-                android:text="@string/idle"
-                android:textSize="14sp" />
+                android:layout_marginTop="17dp"
+                android:layout_marginBottom="9dp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.12"
+                android:text="МОМЕНТЫ НОЧИ"
+                android:textColor="@color/text_dim"
+                android:textSize="10sp" />
+
+            <LinearLayout
+                android:id="@+id/resMoments"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/resDelete"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/btn_outline"
+                    android:gravity="center"
+                    android:paddingHorizontal="18dp"
+                    android:paddingVertical="13dp"
+                    android:text="🗑"
+                    android:textColor="@color/text_soft"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/resShare"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/btn_outline"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center"
+                    android:paddingVertical="13dp"
+                    android:text="Поделиться"
+                    android:textColor="@color/text_light"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/resAgain"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/btn_amber"
+                    android:fontFamily="sans-serif-black"
+                    android:gravity="center"
+                    android:paddingVertical="13dp"
+                    android:text="Слушать заново"
+                    android:textColor="@color/btn_text_dark"
+                    android:textSize="13sp" />
+            </LinearLayout>
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/toggle"
-        android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:layout_marginTop="16dp"
-        android:text="@string/start"
-        android:textSize="18sp"
-        app:cornerRadius="16dp" />
-
-    <TextView
-        android:id="@+id/sensitivityLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/sensitivity_default" />
-
-    <com.google.android.material.slider.Slider
-        android:id="@+id/sensitivity"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:stepSize="1"
-        android:value="50"
-        android:valueFrom="0"
-        android:valueTo="100" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/battery"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/battery_btn" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/recordings"
-        android:textSize="16sp"
-        android:textStyle="bold" />
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="8dp">
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/list"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:paddingBottom="16dp" />
-
-        <TextView
-            android:id="@+id/empty"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="24dp"
-            android:gravity="center"
-            android:text="@string/empty"
-            android:textColor="?android:attr/textColorSecondary" />
-    </FrameLayout>
-</LinearLayout>
+    </ScrollView>
+</FrameLayout>
