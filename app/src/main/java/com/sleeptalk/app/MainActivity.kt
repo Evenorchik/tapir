@@ -1,15 +1,12 @@
 package com.sleeptalk.app
 
 import android.Manifest
-import android.animation.ObjectAnimator
-import android.animation.PropertyValuesHolder
-import android.animation.ValueAnimator
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.graphics.Typeface
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
@@ -19,100 +16,79 @@ import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
-import android.text.Spannable
-import android.text.SpannableString
-import android.text.style.ForegroundColorSpan
-import android.text.style.StyleSpan
-import android.view.View
+import android.webkit.JavascriptInterface
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import com.sleeptalk.app.databinding.ActivityMainBinding
-import com.sleeptalk.app.databinding.ItemMomentBinding
+import org.json.JSONArray
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Hosts the WebView that renders the Unsleep design (assets/ui/index.html) and
+ * bridges it to the native recorder, calibrator, file store and audio player.
+ *  - JS calls native through the `Native` interface.
+ *  - Native pushes state into JS via `UI.*` calls (evaluateJavascript).
+ */
 class MainActivity : AppCompatActivity() {
 
-    private enum class Screen { IDLE, RECORDING, ANALYZING, CALIBRATE, RESULT }
-    private enum class CalState { PROMPT, RUNNING, DONE }
-
-    private lateinit var b: ActivityMainBinding
+    private lateinit var web: WebView
     private val handler = Handler(Looper.getMainLooper())
     private val ru = Locale("ru")
 
-    private var screen = Screen.IDLE
-    private val anims = mutableListOf<ValueAnimator>()
-    private val liveBars = ArrayDeque<Int>()
-
-    private var recordingSessionStart = 0L
-    private var finalizePending = false
-
+    private var mode = "idle"
     private var calibrator: Calibrator? = null
-    private var calState = CalState.PROMPT
+    private var lastCalLevel = 0
 
     private var player: MediaPlayer? = null
     private var playerCompleted = false
     private var currentSession: Session? = null
-    private var currentPlayer = IntArray(0)
 
-    private var pendingAfterPermission: (() -> Unit)? = null
+    private var finalizePending = false
+    private var recordingSessionStart = 0L
+    private var pendingPerm: (() -> Unit)? = null
 
     private val savedReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context?, i: Intent?) {
             if (finalizePending) handler.postDelayed({ finalizeAnalyzing() }, 700)
-            else if (screen == Screen.IDLE) populateIdle()
+            else if (mode == "idle") pushLast()
         }
     }
 
     private val permLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { result ->
-        if (result[Manifest.permission.RECORD_AUDIO] == true) {
-            pendingAfterPermission?.invoke()
-        } else {
-            Toast.makeText(this, R.string.need_mic, Toast.LENGTH_LONG).show()
-        }
-        pendingAfterPermission = null
+        if (result[Manifest.permission.RECORD_AUDIO] == true) pendingPerm?.invoke()
+        else toast(getString(R.string.need_mic))
+        pendingPerm = null
     }
 
     private val ticker = object : Runnable {
         override fun run() {
             tick()
-            handler.postDelayed(this, 150)
+            handler.postDelayed(this, 100)
         }
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        b = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(b.root)
-
-        b.idleOrb.setOnClickListener { requestMic { startRecording() } }
-        b.idleCalibrate.setOnClickListener { openCalibration() }
-        b.idleLast.setOnClickListener { currentIdleSession?.let { showResult(it) } }
-
-        b.recStop.setOnClickListener { stopRecording() }
-
-        b.calClose.setOnClickListener { closeCalibration() }
-        b.calAction.setOnClickListener { onCalAction() }
-
-        b.resClose.setOnClickListener { goIdle() }
-        b.resPlay.setOnClickListener { togglePlay() }
-        b.resAgain.setOnClickListener { restartPlay() }
-        b.resShare.setOnClickListener { currentSession?.let { shareSession(it) } }
-        b.resDelete.setOnClickListener { currentSession?.let { confirmDelete(it) } }
-
-        b.resPlayerWave.setPlayedColors(0xFFf3b074.toInt(), 0x47f0a868)
-        b.idleSpark.setBarColor(0x80f0a868.toInt())
-        b.recWave.setBarColor(0xFFf0a868.toInt())
-        b.calWave.setBarColor(0xFFf6c89a.toInt())
-
-        show(Screen.IDLE)
+        web = WebView(this)
+        web.setBackgroundColor(0xFF1b1411.toInt())
+        web.settings.javaScriptEnabled = true
+        web.settings.domStorageEnabled = true
+        web.settings.mediaPlaybackRequiresUserGesture = false
+        web.webViewClient = WebViewClient()
+        web.addJavascriptInterface(Bridge(), "Native")
+        setContentView(web)
+        web.loadUrl("file:///android_asset/ui/index.html")
     }
 
     override fun onResume() {
@@ -121,18 +97,14 @@ class MainActivity : AppCompatActivity() {
             this, savedReceiver, IntentFilter(RecorderService.BROADCAST_SAVED),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
-        if (RecorderState.isRecording && screen == Screen.IDLE) {
-            recordingSessionStart = RecorderState.startWallMs
-            show(Screen.RECORDING)
-        } else if (screen == Screen.IDLE) {
-            populateIdle()
-        }
+        web.onResume()
         handler.post(ticker)
     }
 
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(ticker)
+        web.onPause()
         try {
             unregisterReceiver(savedReceiver)
         } catch (_: Exception) {
@@ -143,38 +115,48 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         releasePlayer()
         calibrator?.cancel()
+        web.destroy()
     }
 
-    // ---------- screen switching ----------
-
-    private fun show(s: Screen) {
-        screen = s
-        b.idleScreen.visibility = if (s == Screen.IDLE) View.VISIBLE else View.GONE
-        b.recScreen.visibility = if (s == Screen.RECORDING) View.VISIBLE else View.GONE
-        b.analScreen.visibility = if (s == Screen.ANALYZING) View.VISIBLE else View.GONE
-        b.calScreen.visibility = if (s == Screen.CALIBRATE) View.VISIBLE else View.GONE
-        b.resScreen.visibility = if (s == Screen.RESULT) View.VISIBLE else View.GONE
-
-        window.statusBarColor = ContextCompat.getColor(
-            this, when (s) {
-                Screen.RECORDING -> R.color.bg_dark2
-                Screen.RESULT -> R.color.bg_result_top
-                else -> R.color.bg_idle
-            }
-        )
-
-        clearAnims()
-        when (s) {
-            Screen.IDLE -> startBreathing()
-            Screen.RECORDING -> startRecordingAnims()
-            else -> {}
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        when (mode) {
+            "result", "calibrate" -> goIdle()
+            "recording", "analyzing" -> moveTaskToBack(true)
+            else -> super.onBackPressed()
         }
     }
 
-    private fun goIdle() {
-        releasePlayer()
-        populateIdle()
-        show(Screen.IDLE)
+    // ---------- JS bridge ----------
+
+    inner class Bridge {
+        @JavascriptInterface fun ready() = runOnUiThread { onReady() }
+        @JavascriptInterface fun start() = runOnUiThread { ensureMic { startRecording() } }
+        @JavascriptInterface fun stop() = runOnUiThread { stopRecording() }
+        @JavascriptInterface fun calStart() = runOnUiThread { ensureMic { startCalibration() } }
+        @JavascriptInterface fun calCancel() = runOnUiThread {
+            calibrator?.cancel(); calibrator = null; mode = "calibrate"
+        }
+        @JavascriptInterface fun openLatest() = runOnUiThread {
+            SessionStore.latest(this@MainActivity)?.let { showResult(it) }
+        }
+        @JavascriptInterface fun togglePlay() = runOnUiThread { this@MainActivity.togglePlay() }
+        @JavascriptInterface fun again() = runOnUiThread { restartPlay() }
+        @JavascriptInterface fun share() = runOnUiThread { currentSession?.let { shareSession(it) } }
+        @JavascriptInterface fun del() = runOnUiThread { currentSession?.let { confirmDelete(it) } }
+        @JavascriptInterface fun goIdle() = runOnUiThread { this@MainActivity.goIdle() }
+    }
+
+    private fun onReady() {
+        if (RecorderState.isRecording) {
+            mode = "recording"
+            recordingSessionStart = RecorderState.startWallMs
+            jsShow("rec")
+        } else {
+            mode = "idle"
+            pushLast()
+            jsShow("idle")
+        }
     }
 
     // ---------- recording ----------
@@ -182,28 +164,27 @@ class MainActivity : AppCompatActivity() {
     private fun startRecording() {
         promptBatteryIfNeeded()
         recordingSessionStart = System.currentTimeMillis()
-        liveBars.clear()
         val sens = prefs().getInt("sensitivity", 50)
-        val i = Intent(this, RecorderService::class.java)
-            .setAction(RecorderService.ACTION_START)
-            .putExtra(RecorderService.EXTRA_SENSITIVITY, sens)
-        ContextCompat.startForegroundService(this, i)
-        // RecorderState flips on the service thread; reflect immediately.
+        ContextCompat.startForegroundService(
+            this, Intent(this, RecorderService::class.java)
+                .setAction(RecorderService.ACTION_START)
+                .putExtra(RecorderService.EXTRA_SENSITIVITY, sens)
+        )
         RecorderState.startWallMs = recordingSessionStart
-        show(Screen.RECORDING)
+        mode = "recording"
+        jsShow("rec")
     }
 
     private fun stopRecording() {
-        startService(
-            Intent(this, RecorderService::class.java).setAction(RecorderService.ACTION_STOP)
-        )
+        startService(Intent(this, RecorderService::class.java).setAction(RecorderService.ACTION_STOP))
         onRecordingEnded()
     }
 
     private fun onRecordingEnded() {
         if (finalizePending) return
         finalizePending = true
-        show(Screen.ANALYZING)
+        mode = "analyzing"
+        jsShow("anal")
         handler.postDelayed({ finalizeAnalyzing() }, 5000)
     }
 
@@ -211,190 +192,91 @@ class MainActivity : AppCompatActivity() {
         if (!finalizePending) return
         finalizePending = false
         val latest = SessionStore.latest(this)
-        if (latest != null && latest.dateMs >= recordingSessionStart - 1500) {
-            showResult(latest)
-        } else {
-            Toast.makeText(this, R.string.silent_night, Toast.LENGTH_LONG).show()
+        if (latest != null && latest.dateMs >= recordingSessionStart - 1500) showResult(latest)
+        else {
+            toast(getString(R.string.silent_night))
             goIdle()
         }
     }
 
     private fun tick() {
-        when (screen) {
-            Screen.RECORDING -> {
-                if (RecorderState.isRecording) updateRecordingUi() else onRecordingEnded()
-            }
-            Screen.RESULT -> updatePlaybackUi()
-            else -> {}
+        when (mode) {
+            "recording" -> if (RecorderState.isRecording) pushTick() else onRecordingEnded()
+            "result" -> if (player?.isPlaying == true) pushPlay()
         }
     }
 
-    private fun updateRecordingUi() {
+    private fun pushTick() {
         val elapsed = SystemClock.elapsedRealtime() - RecorderState.startElapsedMs
-        b.recTimer.text = fmtTimer(elapsed)
-        b.recStarted.text = "начало в " + fmtClock(RecorderState.startWallMs)
         val n = RecorderState.segmentCount
-        b.recFound.text = if (n == 0) "пока тихо"
-        else "пока найдено " + n + " " + plural(n, "момент", "момента", "моментов")
-
-        liveBars.addLast(RecorderState.currentLevel)
-        while (liveBars.size > 40) liveBars.removeFirst()
-        b.recWave.setBars(liveBars.toIntArray())
+        val found = if (n == 0) "пока тихо"
+        else "пока найдено $n " + plural(n, "момент", "момента", "моментов")
+        val j = JSONObject()
+        j.put("timer", fmtTimer(elapsed))
+        j.put("started", "начало в " + fmtClock(RecorderState.startWallMs))
+        j.put("found", found)
+        j.put("level", RecorderState.currentLevel)
+        callJs("UI.tick", j)
     }
 
     // ---------- calibration ----------
 
-    private fun openCalibration() {
-        calState = CalState.PROMPT
-        renderCal()
-        show(Screen.CALIBRATE)
-    }
-
-    private fun closeCalibration() {
-        calibrator?.cancel()
-        calibrator = null
-        goIdle()
-    }
-
-    private fun onCalAction() {
-        when (calState) {
-            CalState.PROMPT -> requestMic { startCalibration() }
-            CalState.RUNNING -> { calibrator?.cancel(); calibrator = null; calState = CalState.PROMPT; renderCal() }
-            CalState.DONE -> closeCalibration()
-        }
-    }
-
     private fun startCalibration() {
-        calState = CalState.RUNNING
-        renderCal()
+        mode = "calibrate"
+        lastCalLevel = 0
         calibrator = Calibrator(
             handler,
             onPhase = { phase, left ->
-                b.calPhase.text = if (phase == Calibrator.Phase.AMBIENT) "Тишина…" else "Шепчите…"
-                b.calHint.text = if (phase == Calibrator.Phase.AMBIENT)
-                    "Не шумите — измеряю фон комнаты" else "Шепчите так, как могли бы во сне"
-                b.calCountdown.text = left.toString()
+                val j = JSONObject()
+                j.put("state", "running")
+                j.put("phase", if (phase == Calibrator.Phase.AMBIENT) "Тишина…" else "Шепчите…")
+                j.put("hint", if (phase == Calibrator.Phase.AMBIENT)
+                    "Не шумите — измеряю фон комнаты" else "Шепчите так, как могли бы во сне")
+                j.put("left", left)
+                j.put("level", lastCalLevel)
+                callJs("UI.cal", j)
             },
-            onLevel = { level ->
-                liveBars.addLast(level)
-                while (liveBars.size > 40) liveBars.removeFirst()
-                b.calWave.setBars(liveBars.toIntArray())
-            },
+            onLevel = { level -> lastCalLevel = level },
             onDone = { res ->
                 prefs().edit().putFloat("calThreshold", res.thresholdRms.toFloat()).apply()
-                calState = CalState.DONE
-                renderCal()
-                b.calResultText.text =
-                    "Шёпот измерен. Буду реагировать на звуки примерно на 40% тише вашего шёпота — " +
-                            "с запасом, чтобы не пропустить тихое бормотание."
+                val j = JSONObject()
+                j.put("state", "done")
+                j.put("text", "Шёпот измерен. Буду реагировать на звуки примерно на 40% тише вашего " +
+                        "шёпота — с запасом, чтобы не пропустить тихое бормотание.")
+                callJs("UI.cal", j)
             },
             onError = { msg ->
-                Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
-                calState = CalState.PROMPT
-                renderCal()
+                toast(msg)
+                val j = JSONObject(); j.put("state", "prompt"); callJs("UI.cal", j)
             }
         )
-        liveBars.clear()
         calibrator?.start()
     }
 
-    private fun renderCal() {
-        when (calState) {
-            CalState.PROMPT -> {
-                b.calPhase.text = "Тест шёпотом"
-                b.calHint.text = "Держите телефон в 50 см от лица. Я измерю тишину в комнате, " +
-                        "затем ваш шёпот — и подберу чувствительность с запасом."
-                b.calCountdown.visibility = View.GONE
-                b.calWave.visibility = View.GONE
-                b.calResult.visibility = View.GONE
-                b.calAction.text = "Начать тест"
-            }
-            CalState.RUNNING -> {
-                b.calCountdown.visibility = View.VISIBLE
-                b.calWave.visibility = View.VISIBLE
-                b.calResult.visibility = View.GONE
-                b.calAction.text = "Отмена"
-            }
-            CalState.DONE -> {
-                b.calPhase.text = "Готово"
-                b.calHint.text = "Чувствительность подстроена под вашу комнату."
-                b.calCountdown.visibility = View.GONE
-                b.calWave.visibility = View.GONE
-                b.calResult.visibility = View.VISIBLE
-                b.calAction.text = "Готово"
-            }
-        }
-    }
-
-    // ---------- result ----------
-
-    private var currentIdleSession: Session? = null
-
-    private fun populateIdle() {
-        val latest = SessionStore.latest(this)
-        currentIdleSession = latest
-        if (latest == null) {
-            b.idleLast.visibility = View.GONE
-            return
-        }
-        b.idleLast.visibility = View.VISIBLE
-        b.idleSpark.setBars(latest.player)
-        b.idleLastDur.text = fmtClockDur(latest.soundMs)
-        b.idleLastCount.text = latest.count.toString() + " " +
-                plural(latest.count, "момент", "момента", "моментов")
-        b.idleLastDate.text = fmtDate(latest.dateMs)
-    }
+    // ---------- result / playback ----------
 
     private fun showResult(s: Session) {
         currentSession = s
-        currentPlayer = s.player
         releasePlayer()
+        mode = "result"
+        callJs("UI.result", sessionToJson(s))
+    }
 
-        val n = s.count
-        val title = "Этой ночью ты звучал $n " + plural(n, "раз", "раза", "раз")
-        val span = SpannableString(title)
-        val numStart = title.indexOf(n.toString(), 20.coerceAtMost(title.length - 1))
-        if (numStart >= 0) {
-            val end = numStart + n.toString().length
-            span.setSpan(ForegroundColorSpan(0xFFf3b074.toInt()), numStart, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            span.setSpan(StyleSpan(Typeface.ITALIC), numStart, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
-        b.resTitle.text = span
-
-        b.resSound.text = fmtClockDur(s.soundMs)
-        b.resSleep.text = fmtHm(s.sleepMs)
-        b.resLoudest.text = if (s.loudestMs > 0) fmtClock(s.loudestMs) else "—"
-
-        b.resPlayerTotal.text = fmtClockDur(s.soundMs)
-        b.resPlayerWave.setBars(s.player, 0f)
-        b.resPlayerPos.text = "0:00"
-        b.resPlayerLeft.text = "осталось " + fmtClockDur(s.soundMs)
-        b.resPlayIcon.text = "▶"
-
-        b.resMoments.removeAllViews()
-        for (m in s.moments) {
-            val row = ItemMomentBinding.inflate(layoutInflater, b.resMoments, false)
-            row.momentTime.text = fmtClock(m.startMs)
-            row.momentDur.text = fmtSecs(m.durMs)
-            row.momentWave.setBarColor(0x8cf0a868.toInt())
-            row.momentWave.setBars(m.w)
-            b.resMoments.addView(row.root)
-        }
-
-        show(Screen.RESULT)
+    private fun goIdle() {
+        releasePlayer()
+        mode = "idle"
+        pushLast()
+        jsShow("idle")
     }
 
     private fun togglePlay() {
         val s = currentSession ?: return
         val p = player
         if (p != null) {
-            if (p.isPlaying) {
-                p.pause()
-                b.resPlayIcon.text = "▶"
-            } else {
+            if (p.isPlaying) { p.pause(); pushPlay(false) }
+            else {
                 if (playerCompleted) { p.seekTo(0); playerCompleted = false }
-                p.start()
-                b.resPlayIcon.text = "❚❚"
+                p.start(); pushPlay(true)
             }
             return
         }
@@ -402,14 +284,12 @@ class MainActivity : AppCompatActivity() {
             player = MediaPlayer().apply {
                 setDataSource(s.file.absolutePath)
                 setOnCompletionListener { onPlayComplete() }
-                prepare()
-                start()
+                prepare(); start()
             }
             playerCompleted = false
-            b.resPlayIcon.text = "❚❚"
-            Toast.makeText(this, R.string.playing, Toast.LENGTH_SHORT).show()
+            pushPlay(true)
         } catch (e: Exception) {
-            Toast.makeText(this, "Не удалось воспроизвести", Toast.LENGTH_LONG).show()
+            toast("Не удалось воспроизвести")
         }
     }
 
@@ -420,21 +300,22 @@ class MainActivity : AppCompatActivity() {
 
     private fun onPlayComplete() {
         playerCompleted = true
-        b.resPlayIcon.text = "▶"
-        b.resPlayerWave.setBars(currentPlayer, 1f)
-        b.resPlayerPos.text = fmtClockDur(currentSession?.soundMs ?: 0)
-        b.resPlayerLeft.text = "осталось 0:00"
+        val total = currentSession?.soundMs ?: 0
+        val j = JSONObject()
+        j.put("playing", false); j.put("pos", fmtClockDur(total)); j.put("left", "0:00"); j.put("frac", 1.0)
+        callJs("UI.play", j)
     }
 
-    private fun updatePlaybackUi() {
+    private fun pushPlay(playingOverride: Boolean? = null) {
         val p = player ?: return
-        if (!p.isPlaying) return
-        val dur = p.duration
-        val pos = p.currentPosition
-        if (dur <= 0) return
-        b.resPlayerWave.setBars(currentPlayer, pos.toFloat() / dur)
-        b.resPlayerPos.text = fmtClockDur(pos.toLong())
-        b.resPlayerLeft.text = "осталось " + fmtClockDur((dur - pos).toLong())
+        val dur = p.duration.coerceAtLeast(1)
+        val pos = p.currentPosition.coerceIn(0, dur)
+        val j = JSONObject()
+        j.put("playing", playingOverride ?: p.isPlaying)
+        j.put("pos", fmtClockDur(pos.toLong()))
+        j.put("left", fmtClockDur((dur - pos).toLong()))
+        j.put("frac", pos.toDouble() / dur)
+        callJs("UI.play", j)
     }
 
     private fun releasePlayer() {
@@ -460,19 +341,73 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle(R.string.delete_q)
             .setPositiveButton(R.string.delete) { _, _ ->
-                releasePlayer()
-                SessionStore.delete(s)
-                goIdle()
+                releasePlayer(); SessionStore.delete(s); goIdle()
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
+    // ---------- pushes to JS ----------
+
+    private fun pushLast() {
+        val latest = SessionStore.latest(this)
+        if (latest == null) {
+            web.evaluateJavascript("UI.last('null')", null)
+            return
+        }
+        val j = JSONObject()
+        j.put("player", intArray(latest.player))
+        j.put("dur", fmtClockDur(latest.soundMs))
+        j.put("count", latest.count.toString() + " " +
+                plural(latest.count, "момент", "момента", "моментов"))
+        j.put("date", fmtDate(latest.dateMs))
+        callJs("UI.last", j)
+    }
+
+    private fun sessionToJson(s: Session): JSONObject {
+        val n = s.count
+        val j = JSONObject()
+        j.put("titlePre", "Этой ночью ты звучал ")
+        j.put("titleNum", n.toString())
+        j.put("titlePost", " " + plural(n, "раз", "раза", "раз"))
+        j.put("sound", fmtClockDur(s.soundMs))
+        j.put("sleep", fmtHm(s.sleepMs))
+        j.put("loud", if (s.loudestMs > 0) fmtClock(s.loudestMs) else "—")
+        j.put("total", fmtClockDur(s.soundMs))
+        j.put("player", intArray(s.player))
+        val arr = JSONArray()
+        for (m in s.moments) {
+            val o = JSONObject()
+            o.put("t", fmtClock(m.startMs))
+            o.put("d", fmtSecs(m.durMs))
+            o.put("w", intArray(m.w))
+            arr.put(o)
+        }
+        j.put("moments", arr)
+        return j
+    }
+
+    private fun jsShow(name: String) {
+        mode = when (name) {
+            "rec" -> "recording"; "anal" -> "analyzing"; "res" -> "result"
+            "cal" -> "calibrate"; else -> "idle"
+        }
+        web.evaluateJavascript("UI.show('$name')", null)
+    }
+
+    private fun callJs(fn: String, payload: JSONObject) {
+        web.evaluateJavascript("$fn(" + JSONObject.quote(payload.toString()) + ")", null)
+    }
+
+    private fun intArray(a: IntArray): JSONArray {
+        val arr = JSONArray(); for (v in a) arr.put(v); return arr
+    }
+
     // ---------- permissions / battery ----------
 
-    private fun requestMic(then: () -> Unit) {
+    private fun ensureMic(then: () -> Unit) {
         if (hasMic()) { then(); return }
-        pendingAfterPermission = then
+        pendingPerm = then
         val perms = mutableListOf(Manifest.permission.RECORD_AUDIO)
         if (Build.VERSION.SDK_INT >= 33) perms.add(Manifest.permission.POST_NOTIFICATIONS)
         permLauncher.launch(perms.toTypedArray())
@@ -506,86 +441,29 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    // ---------- animations ----------
-
-    private fun clearAnims() {
-        for (a in anims) a.cancel()
-        anims.clear()
-        b.idleGlow.scaleX = 1f; b.idleGlow.scaleY = 1f; b.idleGlow.alpha = 1f
-        b.recDot.alpha = 1f
-        b.recRipple1.scaleX = 1f; b.recRipple1.scaleY = 1f; b.recRipple1.alpha = 1f
-        b.recRipple2.scaleX = 1f; b.recRipple2.scaleY = 1f; b.recRipple2.alpha = 1f
-    }
-
-    private fun startBreathing() {
-        val a = ObjectAnimator.ofPropertyValuesHolder(
-            b.idleGlow,
-            PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.13f),
-            PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.13f),
-            PropertyValuesHolder.ofFloat(View.ALPHA, 0.72f, 1f)
-        )
-        a.duration = 5500
-        a.repeatCount = ValueAnimator.INFINITE
-        a.repeatMode = ValueAnimator.REVERSE
-        a.start()
-        anims.add(a)
-    }
-
-    private fun startRecordingAnims() {
-        val blink = ObjectAnimator.ofFloat(b.recDot, View.ALPHA, 1f, 0.15f)
-        blink.duration = 1900
-        blink.repeatCount = ValueAnimator.INFINITE
-        blink.repeatMode = ValueAnimator.REVERSE
-        blink.start()
-        anims.add(blink)
-        ripple(b.recRipple1, 0)
-        ripple(b.recRipple2, 1900)
-    }
-
-    private fun ripple(view: View, delay: Long) {
-        view.scaleX = 0.45f; view.scaleY = 0.45f
-        val a = ObjectAnimator.ofPropertyValuesHolder(
-            view,
-            PropertyValuesHolder.ofFloat(View.SCALE_X, 0.45f, 1.35f),
-            PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.45f, 1.35f),
-            PropertyValuesHolder.ofFloat(View.ALPHA, 0.7f, 0f)
-        )
-        a.duration = 3800
-        a.startDelay = delay
-        a.repeatCount = ValueAnimator.INFINITE
-        a.repeatMode = ValueAnimator.RESTART
-        a.start()
-        anims.add(a)
-    }
-
-    // ---------- formatting ----------
+    private fun toast(msg: String) =
+        Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
 
     private fun prefs() = getSharedPreferences("unsleep", Context.MODE_PRIVATE)
 
+    // ---------- formatting ----------
+
     private fun fmtTimer(ms: Long): String {
-        val s = ms / 1000
-        val h = s / 3600
-        val m = (s % 3600) / 60
-        val sec = s % 60
+        val s = ms / 1000; val h = s / 3600; val m = (s % 3600) / 60; val sec = s % 60
         return if (h > 0) String.format(Locale.US, "%d:%02d:%02d", h, m, sec)
         else String.format(Locale.US, "%d:%02d", m, sec)
     }
 
     private fun fmtClockDur(ms: Long): String {
-        val s = ms / 1000
-        return String.format(Locale.US, "%d:%02d", s / 60, s % 60)
+        val s = ms / 1000; return String.format(Locale.US, "%d:%02d", s / 60, s % 60)
     }
 
     private fun fmtHm(ms: Long): String {
-        val m = ms / 60000
-        return String.format(Locale.US, "%d:%02d", m / 60, m % 60)
+        val m = ms / 60000; return String.format(Locale.US, "%d:%02d", m / 60, m % 60)
     }
 
-    private fun fmtClock(ms: Long): String =
-        SimpleDateFormat("HH:mm", ru).format(Date(ms))
-
-    private fun fmtDate(ms: Long): String =
-        SimpleDateFormat("d MMM", ru).format(Date(ms))
+    private fun fmtClock(ms: Long): String = SimpleDateFormat("HH:mm", ru).format(Date(ms))
+    private fun fmtDate(ms: Long): String = SimpleDateFormat("d MMM", ru).format(Date(ms))
 
     private fun fmtSecs(ms: Long): String {
         val s = ms / 1000
@@ -593,8 +471,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun plural(n: Int, one: String, few: String, many: String): String {
-        val n10 = n % 10
-        val n100 = n % 100
+        val n10 = n % 10; val n100 = n % 100
         return when {
             n10 == 1 && n100 != 11 -> one
             n10 in 2..4 && n100 !in 12..14 -> few

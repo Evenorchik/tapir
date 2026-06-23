@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<style>
+  @font-face { font-family:'Mulish'; src:url('fonts/mulish.ttf') format('truetype'); font-weight:300 900; font-style:normal; }
+  @font-face { font-family:'Newsreader'; src:url('fonts/newsreader.ttf') format('truetype'); font-weight:300 700; font-style:normal; }
+  @font-face { font-family:'Newsreader'; src:url('fonts/newsreader_italic.ttf') format('truetype'); font-weight:300 700; font-style:italic; }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none;}
+  html,body{height:100%; margin:0; background:#1b1411; font-family:'Mulish',system-ui,sans-serif; overflow:hidden;}
+  .serif{font-family:'Newsreader',serif;}
+
+  @keyframes unsl-breathe{0%,100%{transform:scale(1);opacity:.72}50%{transform:scale(1.13);opacity:1}}
+  @keyframes unsl-blink{0%,100%{opacity:1}50%{opacity:.15}}
+  @keyframes unsl-ripple{0%{transform:scale(.45);opacity:.7}100%{transform:scale(1.35);opacity:0}}
+  @keyframes unsl-eq{0%,100%{transform:scaleY(.32)}50%{transform:scaleY(1.1)}}
+  @keyframes unsl-scan{0%{left:4%}50%{left:90%}100%{left:4%}}
+  @keyframes unsl-spin{to{transform:rotate(360deg)}}
+  @keyframes unsl-fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .screen{position:fixed; inset:0; display:none; flex-direction:column;
+    padding:calc(14px + env(safe-area-inset-top)) 24px calc(20px + env(safe-area-inset-bottom));
+    color:#f3e7da;}
+  .screen.active{display:flex; animation:unsl-fade .32s ease both;}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; flex:none;}
+  .brand{display:flex; align-items:center; gap:9px;}
+  .brand .dot{position:relative; width:17px; height:17px;}
+  .brand .dot i{position:absolute; inset:0; border-radius:50%; background:#f6c89a;}
+  .brand .dot u{position:absolute; top:-3px; left:5px; width:14px; height:14px; border-radius:50%; background:var(--bg,#1b1411);}
+  .brand b{font-family:'Newsreader',serif; font-weight:500; font-size:21px; color:#f3e7da;}
+  .pill-btn{border:1px solid rgba(255,225,195,.18); color:#cbb8a5; font-size:12px; font-weight:600;
+    padding:8px 14px; border-radius:100px; background:transparent;}
+  .icon-btn{width:36px; height:36px; border-radius:50%; border:1px solid rgba(255,225,195,.16);
+    display:flex; align-items:center; justify-content:center; color:#cbb8a5; font-size:14px; background:transparent;}
+
+  .center{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+
+  /* ---- orb ---- */
+  .orb-wrap{position:relative; width:210px; height:210px; display:flex; align-items:center; justify-content:center;}
+  .orb-glow{position:absolute; width:190px; height:190px; border-radius:50%;
+    background:radial-gradient(circle,rgba(240,168,104,.5),rgba(240,168,104,0) 64%); filter:blur(7px);
+    animation:unsl-breathe 5.5s ease-in-out infinite;}
+  .orb-ring{position:absolute; border-radius:50%; border:1px solid rgba(255,220,180,.12);}
+  .orb-ring.r1{width:170px;height:170px;}
+  .orb-ring.r2{width:132px;height:132px;border-color:rgba(255,220,180,.07);}
+  .orb{width:108px; height:108px; border-radius:50%;
+    background:radial-gradient(circle at 36% 30%,#ffe2b6,#f0a868 46%,#cf7a3f);
+    box-shadow:0 0 48px rgba(240,168,104,.5),0 14px 30px rgba(180,90,30,.42),
+      inset 0 -6px 14px rgba(150,70,20,.32),inset 0 4px 11px rgba(255,232,194,.6);
+    display:flex; align-items:center; justify-content:center; transition:transform .15s;}
+  .orb:active{transform:scale(.94);}
+  .orb i{width:30px; height:30px; border-radius:50%; background:rgba(58,30,10,.16);}
+
+  .big-title{font-family:'Newsreader',serif; font-size:27px; color:#f3e7da; margin-top:30px;}
+  .sub{font-size:13px; line-height:1.5; color:#b29a86; text-align:center; max-width:220px; margin-top:8px;}
+
+  /* ---- last-night card ---- */
+  .card{background:#261e18; border:1px solid rgba(255,225,195,.08); border-radius:20px;}
+  .label{font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#7d6a5a;}
+  .last{padding:15px; display:flex; flex-direction:column; gap:13px; flex:none;}
+  .last .row{display:flex; align-items:center;}
+  .play-mini{width:40px; height:40px; border-radius:50%; background:#33291f; display:flex; align-items:center; justify-content:center; flex:none;}
+  .play-mini b{width:0;height:0;border-left:11px solid #f6c89a;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:3px;}
+
+  /* ---- waveforms ---- */
+  .wave{display:flex; align-items:center; gap:2px; flex:1;}
+  .wave>span{flex:1; min-width:0; border-radius:2px; background:#f0a868;}
+
+  /* ---- recording ---- */
+  .listening{display:flex; align-items:center; gap:9px; align-self:center; flex:none;}
+  .listening .rdot{width:9px;height:9px;border-radius:50%;background:#f0a868;box-shadow:0 0 12px #f0a868;animation:unsl-blink 1.9s ease-in-out infinite;}
+  .listening b{font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#f6c89a;}
+  .rec-center{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px; position:relative; width:100%;}
+  .ripple{position:absolute; top:50%; left:50%; width:230px; height:230px; margin:-115px 0 0 -115px; border-radius:50%; border:1px solid rgba(240,168,104,.22); animation:unsl-ripple 3.8s ease-out infinite;}
+  .ripple.d{animation-delay:1.9s;}
+  .rec-time{font-family:'Newsreader',serif; font-size:48px; color:#f3e7da; line-height:1; z-index:1;}
+  .rec-eq{display:flex; align-items:center; gap:3px; height:50px; z-index:1;}
+  .rec-eq>span{width:4px; background:#f0a868; border-radius:2px; transform-origin:center; animation:unsl-eq 1.2s ease-in-out infinite; opacity:.82;}
+  .chip{display:inline-flex; align-items:center; gap:8px; background:#221a14; border:1px solid rgba(255,225,195,.1); border-radius:100px; padding:9px 16px; z-index:1; font-size:12px; color:#b29a86;}
+  .chip i{width:6px;height:6px;border-radius:50%;background:#f6c89a;}
+
+  /* ---- buttons ---- */
+  .btn{border:none; width:100%; font-family:'Mulish'; font-weight:800; font-size:15px; padding:17px; border-radius:18px;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    background:linear-gradient(180deg,#f3b074,#e0894a); color:#3a1e0a; box-shadow:0 12px 24px rgba(224,137,74,.3); transition:transform .12s;}
+  .btn:active{transform:translateY(1px) scale(.99);}
+  .btn .sq{width:12px;height:12px;border-radius:3px;background:#3a1e0a;}
+  .btn-ghost{border:1px solid rgba(255,225,195,.16); background:transparent; color:#e7d6c5; font-weight:700; box-shadow:none;}
+
+  /* ---- analyzing ---- */
+  .spin-wrap{position:relative; width:120px; height:120px; display:flex; align-items:center; justify-content:center; margin-bottom:36px;}
+  .spin-wrap .t{position:absolute; inset:0; border-radius:50%; border:2px solid rgba(240,168,104,.14);}
+  .spin-wrap .a{position:absolute; inset:0; border-radius:50%; border:2px solid transparent; border-top-color:#f0a868; border-right-color:#f0a868; animation:unsl-spin 1.3s linear infinite;}
+  .scanbox{width:100%; position:relative; height:46px; margin-top:30px; background:#120d0a; border-radius:12px; overflow:hidden; border:1px solid rgba(255,225,195,.06);}
+  .scanbox .bars{position:absolute; inset:0; display:flex; align-items:center; gap:2px; padding:0 8px;}
+  .scanbox .bars>span{flex:1;min-width:0;background:rgba(240,168,104,.32);border-radius:1px;}
+  .scanline{position:absolute; top:-4px; bottom:-4px; width:2px; background:#f6c89a; box-shadow:0 0 12px #f6c89a; animation:unsl-scan 2.6s ease-in-out infinite;}
+
+  /* ---- calibrate ---- */
+  .cal-count{font-family:'Newsreader',serif; font-size:42px; color:#f6c89a; margin-top:22px;}
+  .cal-wave{display:flex; align-items:flex-end; gap:3px; height:64px; width:100%; margin-top:22px;}
+  .cal-wave>span{flex:1; min-width:0; background:#f6c89a; border-radius:2px; transition:height .08s linear;}
+
+  /* ---- result ---- */
+  .res-scroll{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; width:100%;}
+  .morning{display:flex; align-items:center; gap:8px;}
+  .morning .dot{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#ffe2b6,#f0a868 50%,#cf7a3f);}
+  .morning b{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#e7b483;}
+  .res-title{font-family:'Newsreader',serif; font-size:27px; color:#f6ecde; line-height:1.15; margin-top:12px;}
+  .res-title em{font-style:italic; color:#f3b074;}
+  .stats{display:flex; gap:10px; margin-top:16px;}
+  .stat{flex:1; background:rgba(255,225,195,.06); border:1px solid rgba(255,225,195,.08); border-radius:14px; padding:11px 12px;}
+  .stat .v{font-family:'Newsreader',serif; font-size:21px; color:#f6ecde; line-height:1;}
+  .stat .k{font-size:10px; color:#9c8775; margin-top:4px;}
+  .player{background:#271d15; border:1px solid rgba(255,225,195,.1); border-radius:18px; padding:15px 16px 16px; margin-top:16px;}
+  .player .hd{display:flex; align-items:center; justify-content:space-between;}
+  .player .hd b{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#b29a86;}
+  .player .hd span{font-size:11px;color:#9c8775;}
+  .player .pl{display:flex; align-items:center; gap:12px; margin-top:13px;}
+  .play-big{width:42px;height:42px;border-radius:50%;background:linear-gradient(180deg,#f3b074,#e0894a);display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 8px 18px rgba(224,137,74,.34); color:#3a1e0a; font-size:15px;}
+  .player .tl{display:flex; align-items:center; justify-content:space-between; margin-top:9px;}
+  .player .tl .a{font-size:10.5px;color:#f6c89a;}
+  .player .tl .b{font-size:10.5px;color:#7d6a5a;}
+  .moments{display:flex; flex-direction:column; gap:8px;}
+  .moment{display:flex; align-items:center; gap:12px; background:rgba(255,225,195,.04); border-radius:13px; padding:10px 13px;}
+  .moment .t{font-size:12px;color:#cbb8a5;font-variant-numeric:tabular-nums;flex:none;width:42px;}
+  .moment .d{font-size:11px;color:#7d6a5a;flex:none;}
+  .res-actions{display:flex; gap:10px; padding:14px 0 4px;}
+
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<!-- ============ IDLE ============ -->
+<section id="s-idle" class="screen active" style="background:#1b1411;--bg:#1b1411;">
+  <div class="topbar">
+    <div class="brand"><span class="dot"><i></i><u></u></span><b>Unsleep</b></div>
+    <button class="pill-btn" onclick="UI.openCalibrate()">Калибровка</button>
+  </div>
+  <div class="center">
+    <div class="orb-wrap" onclick="N.start()">
+      <div class="orb-glow"></div>
+      <div class="orb-ring r1"></div>
+      <div class="orb-ring r2"></div>
+      <div class="orb"><i></i></div>
+    </div>
+    <div class="big-title">Готов слушать</div>
+    <div class="sub">Нажмите на солнце — и я тихо буду слушать всю ночь</div>
+  </div>
+  <div id="idle-last" class="card last hidden" onclick="N.openLatest()">
+    <div class="row" style="justify-content:space-between;">
+      <span class="label">Прошлая ночь</span>
+      <span id="idle-date" style="font-size:12px;color:#7d6a5a;"></span>
+    </div>
+    <div class="row" style="gap:13px;">
+      <div class="play-mini"><b></b></div>
+      <div id="idle-spark" class="wave" style="height:32px;"></div>
+      <div style="text-align:right;flex:none;">
+        <div id="idle-dur" class="serif" style="font-size:17px;color:#f3e7da;line-height:1.1;"></div>
+        <div id="idle-count" style="font-size:10.5px;color:#7d6a5a;"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RECORDING ============ -->
+<section id="s-rec" class="screen" style="background:#15100d;--bg:#15100d;">
+  <div class="listening"><span class="rdot"></span><b>слушаю</b></div>
+  <div class="rec-center">
+    <div class="ripple"></div>
+    <div class="ripple d"></div>
+    <div style="text-align:center;z-index:1;">
+      <div id="rec-timer" class="rec-time">0:00:00</div>
+      <div id="rec-started" style="font-size:12px;color:#7d6a5a;margin-top:10px;"></div>
+    </div>
+    <div id="rec-eq" class="rec-eq"></div>
+    <div class="chip"><i></i><span id="rec-found">пока тихо</span></div>
+  </div>
+  <div style="font-size:11.5px;color:#7d6a5a;text-align:center;line-height:1.5;max-width:240px;align-self:center;margin-bottom:15px;">Можно погасить экран — запись продолжится в фоне</div>
+  <button class="btn" onclick="N.stop()"><span class="sq"></span>Остановить и собрать дорожку</button>
+</section>
+
+<!-- ============ ANALYZING ============ -->
+<section id="s-anal" class="screen" style="background:#1b1411;--bg:#1b1411;">
+  <div class="center">
+    <div class="spin-wrap"><div class="t"></div><div class="a"></div></div>
+    <div class="serif" style="font-size:24px;">Вырезаю тишину</div>
+    <div class="sub">Оставляю только участки со звуком и склеиваю их в одну дорожку</div>
+    <div class="scanbox"><div class="bars" id="anal-bars"></div><div class="scanline"></div></div>
+  </div>
+</section>
+
+<!-- ============ CALIBRATE ============ -->
+<section id="s-cal" class="screen" style="background:#1b1411;--bg:#1b1411;">
+  <div class="topbar">
+    <div class="serif" style="font-size:20px;">Калибровка громкости</div>
+    <button class="icon-btn" onclick="UI.show('idle')">✕</button>
+  </div>
+  <div class="center">
+    <div id="cal-phase" class="serif" style="font-size:28px;text-align:center;">Тест шёпотом</div>
+    <div id="cal-hint" class="sub" style="max-width:270px;margin-top:12px;">Держите телефон в 50 см от лица. Я измерю тишину в комнате, затем ваш шёпот — и подберу чувствительность с запасом.</div>
+    <div id="cal-count" class="cal-count hidden"></div>
+    <div id="cal-wave" class="cal-wave hidden"></div>
+    <div id="cal-result" class="card hidden" style="padding:18px;margin-top:24px;width:100%;">
+      <span class="label">Порог установлен</span>
+      <div id="cal-result-text" style="margin-top:8px;color:#cbb8a5;font-size:14px;line-height:1.4;"></div>
+    </div>
+  </div>
+  <button id="cal-action" class="btn" onclick="UI.calAction()">Начать тест</button>
+</section>
+
+<!-- ============ RESULT ============ -->
+<section id="s-res" class="screen" style="background:linear-gradient(180deg,#2a1d13 0%,#1b1411 36%);--bg:#2a1d13;">
+  <div class="topbar">
+    <div class="morning"><span class="dot"></span><b>Доброе утро</b></div>
+    <button class="icon-btn" onclick="N.goIdle()">✕</button>
+  </div>
+  <div class="res-scroll">
+    <div id="res-title" class="res-title"></div>
+    <div class="stats">
+      <div class="stat"><div id="res-sound" class="v"></div><div class="k">всего звука</div></div>
+      <div class="stat"><div id="res-sleep" class="v"></div><div class="k">длина сна</div></div>
+      <div class="stat"><div id="res-loud" class="v"></div><div class="k">самый громкий</div></div>
+    </div>
+    <div class="player">
+      <div class="hd"><b>Склеенная дорожка</b><span id="res-total"></span></div>
+      <div class="pl">
+        <div class="play-big" id="res-play" onclick="N.togglePlay()">▶</div>
+        <div id="res-wave" class="wave" style="height:36px;gap:1.5px;"></div>
+      </div>
+      <div class="tl"><span id="res-pos" class="a">0:00</span><span id="res-left" class="b"></span></div>
+    </div>
+    <div class="label" style="margin:17px 2px 9px;">Моменты ночи</div>
+    <div id="res-moments" class="moments"></div>
+    <div class="res-actions">
+      <button class="btn btn-ghost" style="flex:none;width:auto;padding:13px 18px;" onclick="N.del()">🗑</button>
+      <button class="btn btn-ghost" onclick="N.share()">Поделиться</button>
+      <button class="btn" onclick="N.again()">Слушать заново</button>
+    </div>
+  </div>
+</section>
+
+<script>
+// Bridge to native; when running outside Android (preview) calls are no-ops.
+var N = window.Native || {
+  start(){}, stop(){}, openCalibrate(){}, calStart(){}, calCancel(){},
+  openLatest(){}, togglePlay(){}, again(){}, share(){}, del(){}, goIdle(){}, ready(){}
+};
+
+var UI = (function(){
+  var calState = 'prompt';
+
+  function $(id){ return document.getElementById(id); }
+  function parse(s){ try { return JSON.parse(s); } catch(e){ return null; } }
+
+  function show(name){
+    ['idle','rec','anal','cal','res'].forEach(function(k){
+      $('s-'+k).classList.toggle('active', k===name);
+    });
+    if(name==='cal'){ calState='prompt'; renderCal(); }
+  }
+
+  // build vertical bars into a container from a 0..100 array
+  function bars(container, arr, opts){
+    opts = opts || {};
+    container.innerHTML='';
+    var played = opts.played||0, n=arr.length;
+    for(var i=0;i<n;i++){
+      var s=document.createElement('span');
+      var h=Math.max(opts.min||6, arr[i]);
+      s.style.height=h+'%';
+      if(opts.twotone){ s.style.background = i < played*n ? '#f3b074' : 'rgba(240,168,104,.28)'; }
+      else if(opts.color){ s.style.background=opts.color; }
+      if(opts.opacity!=null) s.style.opacity=opts.opacity;
+      container.appendChild(s);
+    }
+  }
+
+  function rnd(seed){ var x=Math.sin(seed)*10000; return x-Math.floor(x); }
+
+  // decorative equalizer (recording) — animated by CSS, heights/delays randomised
+  function buildEq(){
+    var c=$('rec-eq'); c.innerHTML='';
+    for(var i=0;i<30;i++){
+      var s=document.createElement('span');
+      var center=1-Math.abs(i-14.5)/15;
+      s.style.height=Math.round(10+(rnd(i*3+2)*0.5+center*0.5)*38)+'px';
+      s.style.animationDelay=Math.round(rnd(i+5)*900)+'ms';
+      c.appendChild(s);
+    }
+    var b=$('anal-bars'); b.innerHTML='';
+    for(var j=0;j<42;j++){ var sp=document.createElement('span'); var burst=(j%9<3)?1:.25;
+      sp.style.height=(18+Math.round(rnd(j*2+7)*70*burst))+'%'; b.appendChild(sp); }
+  }
+
+  // ---- native push targets ----
+  function tick(s){ var d=parse(s); if(!d) return;
+    $('rec-timer').textContent=d.timer; $('rec-started').textContent=d.started;
+    $('rec-found').textContent=d.found;
+    // modulate eq amplitude by live level
+    var amp=0.5+ (d.level||0)/100*0.9;
+    $('rec-eq').style.transform='scaleY('+amp.toFixed(2)+')';
+  }
+
+  function last(s){
+    var d=parse(s);
+    if(!d){ $('idle-last').classList.add('hidden'); return; }
+    $('idle-last').classList.remove('hidden');
+    bars($('idle-spark'), d.player, {color:'#f0a868', opacity:.5});
+    $('idle-dur').textContent=d.dur; $('idle-count').textContent=d.count; $('idle-date').textContent=d.date;
+  }
+
+  function result(s){
+    var d=parse(s); if(!d) return;
+    var title=document.getElementById('res-title');
+    title.innerHTML = d.titlePre + '<em>'+d.titleNum+'</em>' + d.titlePost;
+    $('res-sound').textContent=d.sound; $('res-sleep').textContent=d.sleep; $('res-loud').textContent=d.loud;
+    $('res-total').textContent=d.total; $('res-left').textContent='осталось '+d.total; $('res-pos').textContent='0:00';
+    $('res-play').textContent='▶';
+    bars($('res-wave'), d.player, {twotone:true, played:0, min:18});
+    window.__player=d.player;
+    var mc=$('res-moments'); mc.innerHTML='';
+    d.moments.forEach(function(m){
+      var row=document.createElement('div'); row.className='moment';
+      var t=document.createElement('div'); t.className='t'; t.textContent=m.t;
+      var w=document.createElement('div'); w.className='wave'; w.style.height='22px'; w.style.gap='1.5px';
+      bars(w, m.w, {color:'#f0a868', opacity:.55, min:8});
+      var dd=document.createElement('div'); dd.className='d'; dd.textContent=m.d;
+      row.appendChild(t); row.appendChild(w); row.appendChild(dd); mc.appendChild(row);
+    });
+    show('res');
+  }
+
+  function play(s){
+    var d=parse(s); if(!d) return;
+    $('res-play').textContent = d.playing ? '❚❚' : '▶';
+    $('res-pos').textContent=d.pos; $('res-left').textContent='осталось '+d.left;
+    if(window.__player) bars($('res-wave'), window.__player, {twotone:true, played:d.frac, min:18});
+  }
+
+  // ---- calibration ----
+  function openCalibrate(){ show('cal'); calState='prompt'; renderCal(); }
+  function renderCal(){
+    var phase=$('cal-phase'), hint=$('cal-hint'), count=$('cal-count'), wave=$('cal-wave'),
+        res=$('cal-result'), act=$('cal-action');
+    if(calState==='prompt'){
+      phase.textContent='Тест шёпотом';
+      hint.textContent='Держите телефон в 50 см от лица. Я измерю тишину в комнате, затем ваш шёпот — и подберу чувствительность с запасом.';
+      count.classList.add('hidden'); wave.classList.add('hidden'); res.classList.add('hidden');
+      act.textContent='Начать тест';
+    } else if(calState==='running'){
+      count.classList.remove('hidden'); wave.classList.remove('hidden'); res.classList.add('hidden');
+      act.textContent='Отмена';
+    } else {
+      phase.textContent='Готово';
+      hint.textContent='Чувствительность подстроена под вашу комнату.';
+      count.classList.add('hidden'); wave.classList.add('hidden'); res.classList.remove('hidden');
+      act.textContent='Готово';
+    }
+  }
+  function calAction(){
+    if(calState==='prompt'){ N.calStart(); }
+    else if(calState==='running'){ N.calCancel(); calState='prompt'; renderCal(); }
+    else { show('idle'); }
+  }
+  function cal(s){
+    var d=parse(s); if(!d) return;
+    calState=d.state; renderCal();
+    if(d.state==='running'){
+      $('cal-phase').textContent=d.phase; $('cal-hint').textContent=d.hint;
+      $('cal-count').textContent=d.left;
+      // simple live level bars
+      var arr=window.__calbuf||(window.__calbuf=[]);
+      arr.push(d.level); if(arr.length>40) arr.shift();
+      bars($('cal-wave'), arr, {color:'#f6c89a', min:4});
+    } else if(d.state==='done'){
+      window.__calbuf=[]; $('cal-result-text').textContent=d.text;
+    }
+  }
+
+  function toast(m){ /* native shows real toast; noop here */ }
+
+  buildEq();
+
+  return { show:show, tick:tick, last:last, result:result, play:play,
+           openCalibrate:openCalibrate, calAction:calAction, cal:cal, toast:toast };
+})();
+
+document.addEventListener('DOMContentLoaded', function(){ N.ready(); });
+if(document.readyState!=='loading') N.ready();
+</script>
+</body>
+</html>
