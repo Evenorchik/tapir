@@ -5,7 +5,7 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- bluish glow -->
+    <!-- bluish glow, centred -->
     <path android:pathData="M8,54 a46,46 0 1,0 92,0 a46,46 0 1,0 -92,0 Z">
         <aapt:attr name="android:fillColor">
             <gradient
@@ -13,30 +13,36 @@
                 android:centerX="54"
                 android:centerY="54"
                 android:gradientRadius="46">
-                <item android:offset="0.0" android:color="#8C96B4EB" />
-                <item android:offset="0.55" android:color="#3D96B4EB" />
+                <item android:offset="0.0" android:color="#9E96B4EB" />
+                <item android:offset="0.55" android:color="#4096B4EB" />
                 <item android:offset="1.0" android:color="#0096B4EB" />
             </gradient>
         </aapt:attr>
     </path>
 
-    <!-- moon disc -->
-    <path android:pathData="M20,52 a30,30 0 1,0 60,0 a30,30 0 1,0 -60,0 Z">
+    <!-- moon disc, centred at 54,54 -->
+    <path android:pathData="M23,54 a31,31 0 1,0 62,0 a31,31 0 1,0 -62,0 Z">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:type="radial"
-                android:centerX="42"
+                android:centerX="44"
                 android:centerY="44"
-                android:gradientRadius="36">
-                <item android:offset="0.0" android:color="#FFF4F7FD" />
-                <item android:offset="0.58" android:color="#FFC8D3E9" />
-                <item android:offset="1.0" android:color="#FF9AA8C8" />
+                android:gradientRadius="40">
+                <item android:offset="0.0" android:color="#FFF8FAFE" />
+                <item android:offset="0.55" android:color="#FFCBD5EA" />
+                <item android:offset="1.0" android:color="#FF9FACCB" />
             </gradient>
         </aapt:attr>
     </path>
 
+    <!-- craters for life -->
+    <path android:fillColor="#40586C92" android:pathData="M35.8,47 a3.2,3.2 0 1,0 6.4,0 a3.2,3.2 0 1,0 -6.4,0 Z" />
+    <path android:fillColor="#36586C92" android:pathData="M31.5,60 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0 Z" />
+    <path android:fillColor="#33586C92" android:pathData="M41.8,66 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0 Z" />
+    <path android:fillColor="#33586C92" android:pathData="M39.1,40 a1.9,1.9 0 1,0 3.8,0 a1.9,1.9 0 1,0 -3.8,0 Z" />
+
     <!-- carve the crescent (same colour as the icon background) -->
     <path
         android:fillColor="#FF15100D"
-        android:pathData="M37,46 a29,29 0 1,0 58,0 a29,29 0 1,0 -58,0 Z" />
+        android:pathData="M42,50 a30,30 0 1,0 60,0 a30,30 0 1,0 -60,0 Z" />
 </vector>
