@@ -1,14 +1,42 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- crescent moon -->
+
+    <!-- bluish glow -->
+    <path android:pathData="M8,54 a46,46 0 1,0 92,0 a46,46 0 1,0 -92,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="54"
+                android:gradientRadius="46">
+                <item android:offset="0.0" android:color="#8C96B4EB" />
+                <item android:offset="0.55" android:color="#3D96B4EB" />
+                <item android:offset="1.0" android:color="#0096B4EB" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- moon disc -->
+    <path android:pathData="M20,52 a30,30 0 1,0 60,0 a30,30 0 1,0 -60,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="42"
+                android:centerY="44"
+                android:gradientRadius="36">
+                <item android:offset="0.0" android:color="#FFF4F7FD" />
+                <item android:offset="0.58" android:color="#FFC8D3E9" />
+                <item android:offset="1.0" android:color="#FF9AA8C8" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- carve the crescent (same colour as the icon background) -->
     <path
-        android:fillColor="#7FCFE0"
-        android:pathData="M66,30c-12,0 -22,10 -22,22s10,22 22,22c4.5,0 8.7,-1.4 12.2,-3.7C72,71.6 64,73 56.5,69.7C47,65.5 41.5,55 43.5,44.8C45,37 51,31 58.5,29.3C61,28.8 63.5,28.7 66,30z" />
-    <!-- mic -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,62c3.3,0 6,-2.7 6,-6V44c0,-3.3 -2.7,-6 -6,-6s-6,2.7 -6,6v12c0,3.3 2.7,6 6,6zM64,56c0,5.5 -4.5,10 -10,10s-10,-4.5 -10,-10h-4c0,7.1 5.2,12.9 12,13.8V76h4v-6.2c6.8,-0.9 12,-6.7 12,-13.8h-4z" />
+        android:fillColor="#FF15100D"
+        android:pathData="M37,46 a29,29 0 1,0 58,0 a29,29 0 1,0 -58,0 Z" />
 </vector>
